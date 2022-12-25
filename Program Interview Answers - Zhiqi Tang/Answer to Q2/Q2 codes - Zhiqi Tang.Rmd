@@ -1,0 +1,103 @@
+---
+title: "Q2 codes - Zhiqi Tang"
+author: "Zhiqi Tang"
+date: "2022-12-25"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(deSolve)
+library(ggplot2)
+```
+# set initial conditions
+```{r}
+E0=1
+S0=10
+ES0=0
+P0=0
+vars0<-c(E0, S0, ES0, P0)
+```
+# set parameters
+```{r}
+k1=100/60
+k2=600/60
+k3=150/60
+parms<-c(k1, k2, k3)
+```
+# set time sequence (solve for 50 secs, 1 sec per timestep)
+```{r}
+end.time<-50
+time.seq<-seq(0,end.time,1)
+```
+# define function
+```{r}
+Enzyme.model <- function(t, vars, parms){
+  E<-vars[1]
+  S<-vars[2]
+  ES<-vars[3]
+  P<-vars[4]
+  
+  k1<-parms[1]
+  k2<-parms[2]
+  k3<-parms[3]
+  
+  dE = k2*ES + k3*ES - k1*E*S
+  dS = k2*ES - k1*E*S
+  dES = k1*E*S - k2*ES - k3*ES
+  dP = k3*ES
+  
+  return(list(c(dE, dS, dES, dP)))
+}
+```
+# store results in dataframe
+```{r}
+Enzyme.output1<-lsoda(vars0, time.seq, Enzyme.model, parms)
+colnames(Enzyme.output1)[2:5]<-c("E", "S", "ES", "P")
+Enzyme.output1<-as.data.frame(Enzyme.output1)
+```
+# plot results in graph
+```{r}
+colors <- c("[E]"="#999999", "[S]"="#E69F00", "[ES]"="#56B4E9", "[P]"="#009E73")
+
+ggplot(data=Enzyme.output1,aes(x=time))+geom_line(aes(y=E,color="[E]"))+geom_line(aes(y=S,color="[S]"))+geom_line(aes(y=ES,color="[ES]"))+geom_line(aes(y=P,color="[P]"))+labs(x="Time(seconds)",y="Concentrations",color="Legend")+scale_color_manual(values = colors)
+```
+# set new initial conditions
+```{r}
+delta0=0
+newvars0<-c(E0, S0, ES0, P0, delta0)
+```
+# define function
+```{r}
+V.model <- function(t, vars, parms){
+  E<-vars[1]
+  S<-vars[2]
+  ES<-vars[3]
+  P<-vars[4]
+  delta<-vars[5]
+  
+  k1<-parms[1]
+  k2<-parms[2]
+  k3<-parms[3]
+  
+  dE = k2*ES + k3*ES - k1*E*S
+  dS = k2*ES - k1*E*S
+  dES = k1*E*S - k2*ES - k3*ES
+  dP = k3*ES
+  delta = k3*(k1*E*S - k2*ES - k3*ES)
+  #note that d(dp/dt)/dt = k3*dES/dt
+  
+  return(list(c(dE, dS, dES, dP, delta)))
+}
+```
+# store results in dataframe
+```{r}
+V.output1<-lsoda(newvars0, time.seq, V.model, parms)
+colnames(V.output1)[2:6]<-c("E", "S", "ES", "P", "delta")
+V.output1<-as.data.frame(V.output1)
+```
+# plot V against S
+```{r}
+ggplot(data = V.output1)+geom_line(aes(x=S,y=delta))
+```
+# the plot shows Vm ~ 1.307 at S0 = 10.
